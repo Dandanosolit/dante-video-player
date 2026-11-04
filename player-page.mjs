@@ -18,6 +18,25 @@ const ERRORS = new Map([
 ]);
 const fail = code => Object.assign(new Error(code), { code });
 
+const SHORT_STATES = new Map([
+  ['idle', 'Preparando…'], ['loading-api', 'Cargando YouTube…'],
+  ['loading-player', 'Esperando al reproductor…'], ['ready', 'Listo. Pulsa Reproducir si no empieza.'],
+  ['playing', 'YouTube informa reproducción.'], ['play-requested', 'Esperando reproducción…'],
+  ['unstarted', 'Pulsa Reproducir.'], ['ended', 'Video terminado.'], ['paused', 'Video en pausa.'],
+  ['buffering', 'Cargando video…'], ['cued', 'Video preparado. Pulsa Reproducir.'],
+  ['autoplay-blocked', 'Inicio automático bloqueado. Pulsa Reproducir.'],
+  ['closed', 'Reproductor cerrado.'], ['invalid', 'Enlace no válido. Consulta Detalles.'],
+  ['api-error', 'No se pudo abrir YouTube. Consulta Detalles.'],
+  ['player-timeout', 'YouTube no respondió en 15 s. Puedes esperar o cerrar.'],
+]);
+const SHORT_ERRORS = new Map([
+  [2, 'Parámetro de video inválido. [2]'], [5, 'Error de reproducción HTML5. [5]'],
+  [100, 'Video no disponible; puede estar retirado o privado. [100]'],
+  [101, 'El propietario no permite este video incrustado. [101]'],
+  [150, 'El propietario no permite este video incrustado. [150]'],
+  [153, 'YouTube no recibió Referer o identificación del cliente. [153]'],
+]);
+
 export function parseVideoQuery(search) {
   if (typeof search !== 'string' || search.length > 128) throw fail('INVALID_VIDEO');
   const entries = [...new URLSearchParams(search)];
@@ -53,7 +72,11 @@ export class PlayerPage {
       physicalVideoVerified: false, captureVerified: false });
   }
   publish(phase, message, errorCode = null) {
-    this.phase = phase; this.errorCode = errorCode; this.nodes.status.textContent = message;
+    this.phase = phase; this.errorCode = errorCode;
+    this.nodes.status.textContent = phase === 'error'
+      ? SHORT_ERRORS.get(errorCode) || 'Error del reproductor. Consulta Detalles.'
+      : SHORT_STATES.get(phase) || message;
+    if (this.nodes.diagnostic) this.nodes.diagnostic.textContent = message;
     this.nodes.play.disabled = this.closed || !this.playerReady;
     this.nodes.close.disabled = this.closed;
   }
